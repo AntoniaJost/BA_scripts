@@ -26,7 +26,7 @@ if(Sys.info() ["user"] == "anjost001") {
 }
 
 # input
-tids = c("900120", "900121")
+tids = c("900120") #, "900121")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
@@ -48,7 +48,7 @@ indx = sidfex.load.index()
 for (i.tid in 1:length(tids)) {
   tid = tids[i.tid]
   
-  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid) #, iy = iy, idoy = idoy) # delete iy and idoy if wanted
+  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid, iy = iy, idoy = idoy) # delete iy and idoy if wanted
   fcst = sidfex.read.fcst(subind.fcst)
 
   # so sieht aus, wenn iy und idoy nicht angegeben
@@ -167,7 +167,7 @@ for (i.tid in 1:length(tids)) {
       fcst.lin.eval = sidfex.evaluate(obs = obs.adj, fcst = fcst.lin, do.speedangle = TRUE, verbose=FALSE)
       
       # some plotting
-      if (plot = TRUE) {
+      if (plot == TRUE) {
         
         plot.title = paste0(fcst$res.list[[i]]$TargetID, "_", fcst$res.list[[i]]$GroupID, "_", fcst$res.list[[i]]$MethodID, "_", fcst$res.list[[i]]$InitYear, "-", fcst$res.list[[i]]$InitDayOfYear, "_ld:", i.sub, ".png")
         if (!file.exists(file.path(wd, plot.title))) {
@@ -241,7 +241,32 @@ for (i.tid in 1:length(tids)) {
       } # end if-clause for plotting
       
       # some statistics
-      if(matrix = TRUE) {
+      if(matrix == TRUE) {
+        ncol = (10*48)+1 # only valuable for giops (10 days a 48 fcst + last day (10.000))
+        nrow = length(fcst$res.list) # number of fcst available in total
+      
+        # initialize 6 matrices (3 for gc_dist, speed & angle; twice for linear & normal (half-hourly))
+        matrix_calc = function(input.data) {
+          matrix = matrix(nrow = nrow, ncol = ncol)
+          if(ncol == length(fcst$res.list[[1]]$data$DaysLeadTime)) {
+            colnames(matrix) = fcst$res.list[[1]]$data$DaysLeadTime
+          } else{
+            stop("ncol not equal to total DaysLeadTime")
+          }
+          rownames(matrix)[i] = paste0(fcst.adj$res.list[[1]]$InitYear, "_", fcst.adj$res.list[[1]]$InitDayOfYear)
+          cols = fcst.adj$res.list[[1]]$data$DaysLeadTime
+          matrix[i,as.character(cols)] = input.data 
+          return(matrix)
+        }
+        
+        matr_dis = matrix_calc(fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist)
+        matr_dis_lin = matrix_calc(fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist,)
+        matr_speed = matrix_calc(fcst.adj.eval$res.list[[1]]$ens.mean.relspeed)
+        matr_speed_lin = matrix_calc(fcst.lin.eval$res.list[[1]]$ens.mean.relspeed)
+        matr_angle = matrix_calc(fcst.adj.eval$res.list[[1]]$ens.mean.angle)
+        matr_angle_lin = matrix_calc(fcst.lin.eval$res.list[[1]]$ens.mean.angle)
+        
+        
         
       }
       

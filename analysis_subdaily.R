@@ -8,7 +8,9 @@
 rm(list=ls())
 source("/home/anjost001/Documents/BA_scripts/sidfex.evaluate.R")
 source("/home/anjost001/Documents/BA_scripts/subset.R")
+source("/home/anjost001/Documents/BA_scripts/range.calc.R")
 source("/home/anjost001/Documents/BA_scripts/matrix.R")
+source("/home/anjost001/Documents/BA_scripts/calc.mean.R")
 
 # load packages (if not already loaded)
 require(spheRlab)
@@ -32,12 +34,14 @@ tids = c("900120") #, "900121")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
-iy = "2021"
+iy = "2022"
 idoy = "50" 
 
 update = FALSE # if updated fcst and obs are wanted
 plot = FALSE # if plots are wanted (might take quite long)
 matrixs = TRUE # if matrices with errors are wanted
+# statistics can only be TRUE if matrixs is TRUE
+statistics = TRUE # if statistics are wanted
 
 # update fcst and obs data (set TRUE if desired)
 if (update == TRUE) {
@@ -162,13 +166,13 @@ for (i.tid in 1:length(tids)) {
         
         par(mfrow=c(2,2))
         
-        # calculating ylim for plots
-        range_calc = function(eval_value) {
-          ylim = c()
-          is_naN_inf = is.na(eval_value) | is.nan(eval_value) | is.infinite(eval_value)
-          ylim = range(eval_value[!is_naN_inf])
-          return(ylim)
-        }
+        # # calculating ylim for plots
+        # range_calc = function(eval_value) {
+        #   ylim = c()
+        #   is_naN_inf = is.na(eval_value) | is.nan(eval_value) | is.infinite(eval_value)
+        #   ylim = range(eval_value[!is_naN_inf])
+        #   return(ylim)
+        # }
         
         ylim.lin.speed = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.relspeed)
         ylim.lin.angle = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.angle)
@@ -245,10 +249,82 @@ for (i.tid in 1:length(tids)) {
         matr_angle_lin = matrix_calc(matr_angle_lin, fcst.lin.eval$res.list[[1]]$ens.mean.angle) # linear
         
       } # end if matrix calc
-
-    } # end for-loop sub dataset 
+      
+    } # end for-loop sub dataset
+    
+  } # end for-loop days in res.list    
   
-  } # end for-loop days in res.list
+  # some statistics
+  if(statistics == TRUE){
+    
+    time.sel = c((nrow - 30):nrow) # hier jetzt 2023_98 - 128
+    # mean value for every step of the highly resolved leadtime
+    colmeans_dis = colMeans(matr_dis[time.sel,], na.rm = T)
+    colmeans_dis_lin = colMeans(matr_dis_lin[time.sel,], na.rm = T)
+    colmeans_speed = colMeans(matr_speed[time.sel,], na.rm = T)
+    colmeans_speed_lin = colMeans(matr_speed_lin[time.sel,], na.rm = T)
+    colmeans_angle = colMeans(matr_angle[time.sel,], na.rm = T)
+    colmeans_angle_lin = colMeans(matr_angle_lin[time.sel,], na.rm = T)
+    
+    # One mean value for every day of the leadtime
+    dis_1d_mean = calc.mean(colmeans_dis)
+    dis_lin_1d_mean = calc.mean(colmeans_dis_lin)
+    speed_1d_mean = calc.mean(colmeans_speed)
+    speed_lin_1d_mean = calc.mean(colmeans_speed_lin)
+    angle_1d_mean = calc.mean(colmeans_angle)
+    angle_lin_1d_mean = calc.mean(colmeans_angle_lin)
+
+    # some statistical plotting
+    # function for plotting
+    stat.plot = function(x, high.res, lin, ylab, title) {
+      ylim1 = range(range_calc(high.res), range_calc(lin))
+      plot(x = x, y = high.res, xlab="days lead time", ylab = ylab,
+          main = title, ylim = ylim1, col = "black", type = "l")
+      abline(h = 0,v = c(1:10),col = "grey",lty = 3)
+      lines(x = x, y=lin, col="blue")
+      legend("topleft", c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
+    }
+    
+    # plots for half-hourly steps
+    # different x-axis options, depending on wanted Leadtime
+    x = fcst$res.list[[1]]$data$DaysLeadTime # entire leadtime
+    x_1d = fcst$res.list[[1]]$data$DaysLeadTime[1:49] # only day 1
+    x_2to10 = fcst$res.list[[1]]$data$DaysLeadTime[-(1:48)] # everything except day 1
+    
+    # gc-dist
+    title_gc1 = paste0("Great circle distance - ", tid, " - 2023:98-128")
+    ylab_gc1 = "mean error / m"
+    stat.plot(x, colmeans_dis, colmeans_dis_lin, ylab_gc1, title_gc1)
+    
+    # speed (entire leadtime)
+    title_sp1 = paste0("Speed - ", tid, " - 2023:98-128")
+    ylab_sp1 = "mean error"
+    stat.plot(x, colmeans_speed, colmeans_speed_lin, ylab_sp1, title_sp1)
+    # leadtime 1
+    title_sp2 = paste0("Speed - ", tid," - 2023:98-128; Leadtime 1")
+    stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], ylab_sp1, title_sp2)
+    # leadtime 2:10
+    title_sp3 = paste0("Speed - ", tid, " - 2023:98-128; Leadtime 2-10")
+    stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], ylab_sp1, title_sp3)
+
+    # angle (entire leadtime)
+    title_an1 = paste0("Relative Angle - ", tid, " - 2023:98-128")
+    ylab_an1 = "mean error / degree left"
+    stat.plot(x, colmeans_angle, colmeans_angle_lin, ylab_an1, title_an1)
+    # leadtime 1
+    title_an2 = paste0("Relative Angle - ", tid, " - 2023:98-128; Leadtime 1")
+    stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], ylab_an1, title_an2)
+    # leadtime 2:10
+    title_an3 = paste0("Relative Angle - ", tid, " - 2023:98-128; Leadtime 2-10")
+    stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3)
+    
+    # plots for daily steps 
+    # herefore I recommend changing "type" in stat.plot to "p", and "lines" to "points"
+    stat.plot(1:10, dis_1d_mean, dis_lin_1d_mean, ylab_gc1, title_gc1)
+    stat.plot(1:10, speed_1d_mean, speed_lin_1d_mean, ylab_sp1, title_sp1)
+    stat.plot(1:10, angle_1d_mean, angle_lin_1d_mean, ylab_an1, title_an1)
+    
+  } # end if-clause for statistics
 
 } # end for-loop TargetID
 

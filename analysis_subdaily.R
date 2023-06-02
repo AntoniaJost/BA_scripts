@@ -6,7 +6,9 @@
 
 # if desired, clear workspace
 rm(list=ls())
-load("~/Downloads/sidfex.evaluate.R")
+source("/home/anjost001/Documents/BA_scripts/sidfex.evaluate.R")
+source("/home/anjost001/Documents/BA_scripts/subset.R")
+source("/home/anjost001/Documents/BA_scripts/matrix.R")
 
 # load packages (if not already loaded)
 require(spheRlab)
@@ -32,62 +34,43 @@ mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
 iy = "2021"
 idoy = "50" 
+
+update = FALSE # if updated fcst and obs are wanted
 plot = FALSE # if plots are wanted (might take quite long)
-matrix = TRUE # if matrix with errors is wanted
+matrixs = TRUE # if matrices with errors are wanted
 
 # update fcst and obs data (set TRUE if desired)
-if (FALSE) {
+if (update == TRUE) {
   res = sidfex.download.fcst()
   res2 = sidfex.download.obs()
 }
 
 # load SIDFEx index and read data
 indx = sidfex.load.index()
-
+  
 # Loop over TargetIDs
 for (i.tid in 1:length(tids)) {
   tid = tids[i.tid]
   
-  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid, iy = iy, idoy = idoy) # delete iy and idoy if wanted
+  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid) #, iy = iy, idoy = idoy) # delete iy and idoy if wanted
   fcst = sidfex.read.fcst(subind.fcst)
-
-  # so sieht aus, wenn iy und idoy nicht angegeben
-  # subind.all = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid)
-  # fcst.all = sidfex.read.fcst(subind.all)
-  
-  # obs1 = sidfex.read.obs(index = indx, TargetID = tid)
   obs = sidfex.remaptime.obs2fcst(fcst = fcst)
 
   if (length(fcst$res.list) != length(obs$res.list)) { # quick sanity check
     stop("check fcst and obs, they don't have same length")
   }
+  
+  # global matrix pre-settings
+  ncol = (10*48)+1 # only valuable for giops (10 days a 48 fcst + last day (10.000))
+  nrow = length(fcst$res.list) # number of fcst available in total 
+  matrix = matrix(nrow = nrow, ncol = ncol) # create empty generic matrix
+  
   ### Loop over every day in res.list
   for (i in 1:length(fcst$res.list)) {
     
     # dividing obs and fcst datasets of 10 days leadtime into 10 separate datasets for each day
     daysLeadTime = fcst$res.list[[i]]$data$DaysLeadTime # extract Leadtime
     integers = unique(floor(daysLeadTime)) # reduce to integers
-    
-    # function to create subset
-    subdiv_dataset = function(dataset) { 
-    
-      teilDatensaetze = list() # empty list to store sub datasets
-      for (i.num in 1:length(integers)) { # loop over integers (=every day)
-        currentNumber = integers[i.num]
-        startIdx = which(floor(daysLeadTime) == currentNumber) # index for begin of dataset
-          
-        if(i.num == length(integers)-1) { # if last set (day 9 to 10) add last single value of 10.000 to dataset of day 9
-          startIdx = c(startIdx, startIdx[length(startIdx)]+1)
-          teilDatensatz = dataset$res.list[[i]]$data[startIdx[1]:startIdx[length(startIdx)],] 
-          teilDatensaetze[[i.num]] = teilDatensatz 
-          break # stop loop
-        }
-        
-        teilDatensatz = dataset$res.list[[i]]$data[startIdx[1]:startIdx[length(startIdx)],] # extract
-        teilDatensaetze[[i.num]] <- teilDatensatz # save
-      }
-      return(teilDatensaetze)
-    }
     
     obs_subdiv = subdiv_dataset(obs) # subdivided obs dataset
     fcst_subdiv = subdiv_dataset(fcst) # subdivided fcst dataset
@@ -104,8 +87,8 @@ for (i.tid in 1:length(tids)) {
       obs_subdiv_temp$res.list[[1]]$data = NULL # remove any data
       obs_subdiv_temp$res.list[[1]]$data = as.data.frame(append(obs_subdiv_temp$res.list[[1]]$data, obs_subdiv[[i.sub]])) # "overwrite" with reduced dataset of just one day leadtime
       # same for fcst
-      fcst_subdiv_temp = fcst # hier beginnt Fehler! Darf nicht einfach res.list[[1]] Sachen (vor Data) von fcst uebernehmen, denn das wird immer das Alte sein
-      fcst_subdiv_temp$res.list = list(fcst_subdiv_temp$res.list[[i]]) # hier mit fcst$res.list[[i]] ueberschreiben?
+      fcst_subdiv_temp = fcst 
+      fcst_subdiv_temp$res.list = list(fcst_subdiv_temp$res.list[[i]])
       fcst_subdiv_temp$res.list[[1]]$data = NULL
       fcst_subdiv_temp$res.list[[1]]$data = as.data.frame(append(fcst_subdiv_temp$res.list[[1]]$data, fcst_subdiv[[i.sub]]))
     
@@ -240,39 +223,32 @@ for (i.tid in 1:length(tids)) {
         dev.off()
       } # end if-clause for plotting
       
-      # some statistics
-      if(matrix == TRUE) {
-        ncol = (10*48)+1 # only valuable for giops (10 days a 48 fcst + last day (10.000))
-        nrow = length(fcst$res.list) # number of fcst available in total
-      
-        # initialize 6 matrices (3 for gc_dist, speed & angle; twice for linear & normal (half-hourly))
-        matrix_calc = function(input.data) {
-          matrix = matrix(nrow = nrow, ncol = ncol)
-          if(ncol == length(fcst$res.list[[1]]$data$DaysLeadTime)) {
-            colnames(matrix) = fcst$res.list[[1]]$data$DaysLeadTime
-          } else{
-            stop("ncol not equal to total DaysLeadTime")
-          }
-          rownames(matrix)[i] = paste0(fcst.adj$res.list[[1]]$InitYear, "_", fcst.adj$res.list[[1]]$InitDayOfYear)
-          cols = fcst.adj$res.list[[1]]$data$DaysLeadTime
-          matrix[i,as.character(cols)] = input.data 
-          return(matrix)
+      # some matrices - calc 6 matrices (3 for gc_dist, speed & angle; twice for linear & normal (half-hourly))
+      if(matrixs == TRUE) {
+        
+        if(i == 1 && i.sub == 1) {
+          matr_dis = matrix
+          matr_dis_lin = matrix
+          matr_speed = matrix
+          matr_speed_lin = matrix
+          matr_angle = matrix
+          matr_angle_lin = matrix
         }
+        # matrices for great-circle distance
+        matr_dis = matrix_calc(matr_dis, fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist) # half-hourly
+        matr_dis_lin = matrix_calc(matr_dis_lin, fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist) # linear
+        # matrices for relative speed
+        matr_speed = matrix_calc(matr_speed, fcst.adj.eval$res.list[[1]]$ens.mean.relspeed) # half-hourly
+        matr_speed_lin = matrix_calc(matr_speed_lin, fcst.lin.eval$res.list[[1]]$ens.mean.relspeed) # linear
+        # matrices for angle
+        matr_angle = matrix_calc(matr_angle, fcst.adj.eval$res.list[[1]]$ens.mean.angle) # half-hourly
+        matr_angle_lin = matrix_calc(matr_angle_lin, fcst.lin.eval$res.list[[1]]$ens.mean.angle) # linear
         
-        matr_dis = matrix_calc(fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist)
-        matr_dis_lin = matrix_calc(fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist,)
-        matr_speed = matrix_calc(fcst.adj.eval$res.list[[1]]$ens.mean.relspeed)
-        matr_speed_lin = matrix_calc(fcst.lin.eval$res.list[[1]]$ens.mean.relspeed)
-        matr_angle = matrix_calc(fcst.adj.eval$res.list[[1]]$ens.mean.angle)
-        matr_angle_lin = matrix_calc(fcst.lin.eval$res.list[[1]]$ens.mean.angle)
-        
-        
-        
-      }
-      
-    } # end for-loop sub dataset 
+      } # end if matrix calc
 
-  } # end for-loop days in res.list
+    } # end for-loop sub dataset 
   
+  } # end for-loop days in res.list
+
 } # end for-loop TargetID
 

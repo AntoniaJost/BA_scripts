@@ -11,6 +11,7 @@ source("/home/anjost001/Documents/BA_scripts/subset.R")
 source("/home/anjost001/Documents/BA_scripts/range.calc.R")
 source("/home/anjost001/Documents/BA_scripts/matrix.R")
 source("/home/anjost001/Documents/BA_scripts/calc.mean.R")
+source("/home/anjost001/Documents/BA_scripts/split.daily.R")
 
 # load packages (if not already loaded)
 require(spheRlab)
@@ -26,22 +27,29 @@ if(Sys.info() ["user"] == "anjost001") {
     dir.create(save_dir)
     print(paste0("new directory created:", work_dir, "/", save_dir))
   }
-  wd = setwd(save_dir) # set new wd
+  wd = setwd(paste0(work_dir, "/" , save_dir)) # set new wd
 }
 
 # input
-tids = c("900120") #, "900121")
+tids = c("900126", "900128", "300534063807110")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
 iy = "2022"
-idoy = "50" 
+idoy = "222" 
 
 update = FALSE # if updated fcst and obs are wanted
 plot = FALSE # if plots are wanted (might take quite long)
 matrixs = TRUE # if matrices with errors are wanted
-# statistics can only be TRUE if matrixs is TRUE
+# statistics & boxplots can only be TRUE if matrixs is TRUE
 statistics = TRUE # if statistics are wanted
+boxplots = TRUE # if boxplots are wanted
+# specify time period for statistic & boxplot analysis (not more than 3 months recommended)
+# VERY IMPORTANT: Please make sure, that a forecast exists for those two dates! 
+#                 If you don't know that, don't worry, the possible error will be caught anyway.
+#                 Also, please make sure to enter some dates here anyway, even if you don't want statistics. 
+time.start = "135_2023"
+time.end = "152_2023"
 
 # update fcst and obs data (set TRUE if desired)
 if (update == TRUE) {
@@ -56,7 +64,7 @@ indx = sidfex.load.index()
 for (i.tid in 1:length(tids)) {
   tid = tids[i.tid]
   
-  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid) #, iy = iy, idoy = idoy) # delete iy and idoy if wanted
+  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid)#, iy = iy, idoy = idoy) # delete iy and idoy if wanted
   fcst = sidfex.read.fcst(subind.fcst)
   obs = sidfex.remaptime.obs2fcst(fcst = fcst)
 
@@ -254,10 +262,28 @@ for (i.tid in 1:length(tids)) {
     
   } # end for-loop days in res.list    
   
-  # some statistics
-  if(statistics == TRUE){
+  # create reference frame to know at which index position which date is located in matrices
+  reference.frame = data.frame(index = 1:length(fcst$res.list), y_doy = NA)
+  for(i.doy in 1:length(fcst$res.list)){
+    reference.frame$y_doy[i.doy] = paste0(fcst$res.list[[i.doy]]$InitDayOfYear, "_", fcst$res.list[[i.doy]]$InitYear)
+  }
+  ref.date.start = which(reference.frame$y_doy == time.start)
+  if(identical(ref.date.start, integer(0))) {
+    stop("No forecast exists for that starting date. Please check '~/SIDFEx/data/fcst/eccc001' for 
+         'ls eccc001_giops_tid_20xx*' (add your tid & year instead of xx) to see if a forecast exists.")
+    print(tid)
+  }
+  ref.date.end = which(reference.frame$y_doy == time.end)
+  if(identical(ref.date.end, integer(0))) {
+    stop("No forecast exists for that ending date. Please check '~/SIDFEx/data/fcst/eccc001' for 
+         'ls eccc001_giops_tid_20xx*' (add your tid & year instead of xx) to see if a forecast exists.")
+    print(tid)
+  } 
+  time.sel = c(ref.date.start:ref.date.end) 
     
-    time.sel = c((nrow - 30):nrow) # hier jetzt 2023_98 - 128
+  # some statistics
+  if(matrixs == TRUE && statistics == TRUE){
+    
     # mean value for every step of the highly resolved leadtime
     colmeans_dis = colMeans(matr_dis[time.sel,], na.rm = T)
     colmeans_dis_lin = colMeans(matr_dis_lin[time.sel,], na.rm = T)
@@ -266,7 +292,8 @@ for (i.tid in 1:length(tids)) {
     colmeans_angle = colMeans(matr_angle[time.sel,], na.rm = T)
     colmeans_angle_lin = colMeans(matr_angle_lin[time.sel,], na.rm = T)
     
-    # One mean value for every day of the leadtime
+    # One mean value for every day of the leadtime 
+    # taking only the values of colmeans
     dis_1d_mean = calc.mean(colmeans_dis)
     dis_lin_1d_mean = calc.mean(colmeans_dis_lin)
     speed_1d_mean = calc.mean(colmeans_speed)
@@ -276,13 +303,13 @@ for (i.tid in 1:length(tids)) {
 
     # some statistical plotting
     # function for plotting
-    stat.plot = function(x, high.res, lin, ylab, title) {
+    stat.plot = function(x, high.res, lin, ylab, title, pos.lg) {
       ylim1 = range(range_calc(high.res), range_calc(lin))
       plot(x = x, y = high.res, xlab="days lead time", ylab = ylab,
           main = title, ylim = ylim1, col = "black", type = "l")
       abline(h = 0,v = c(1:10),col = "grey",lty = 3)
       lines(x = x, y=lin, col="blue")
-      legend("topleft", c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
+      legend(pos.lg, c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
     }
     
     # plots for half-hourly steps
@@ -291,40 +318,193 @@ for (i.tid in 1:length(tids)) {
     x_1d = fcst$res.list[[1]]$data$DaysLeadTime[1:49] # only day 1
     x_2to10 = fcst$res.list[[1]]$data$DaysLeadTime[-(1:48)] # everything except day 1
     
+    year = strsplit(time.start, '_')[[1]][2] # extract year
+    first = as.numeric(strsplit(time.start, '_')[[1]][1]) # extract first day, remove 0 if there
+    last = as.numeric(strsplit(time.end, '_')[[1]][1]) # extract last day, remove 0 if there
+    date = paste0(year, ":", first, "-", last) # total selected time period
+    
+    myDir = unlist(strsplit(getwd(), '/'))
+    stat.Dir = paste0(myDir[-length(myDir)], collapse = '/') # directory for statistical plots
+    wd2 = setwd(stat.Dir) # change directory
+    wd2 = setwd(stat.Dir) # change directory
+    print(paste0("Directory has been changed to ", wd2))
+    
+    dist.title = paste0(tid, "_", date, "_gc.dist.png")
+    speed.title = paste0(tid, "_", date, "_speed.png")
+    angle.title = paste0(tid, "_", date, "_angle.png")
+    daily.title = paste0(tid, "_", date, "_daily.png")
+
     # gc-dist
-    title_gc1 = paste0("Great circle distance - ", tid, " - 2023:98-128")
+    if (!file.exists(file.path(wd2, dist.title))) {
+      png(filename = dist.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    } else {
+      print(paste0("File '", dist.title, "' already exists. Skipped it.")) # skip if file already exists
+    }
+    title_gc1 = paste0("Great circle distance - ", tid, " - ", date)
     ylab_gc1 = "mean error / m"
-    stat.plot(x, colmeans_dis, colmeans_dis_lin, ylab_gc1, title_gc1)
+    stat.plot(x, colmeans_dis, colmeans_dis_lin, ylab_gc1, title_gc1, "topleft")
+    dev.off()
     
     # speed (entire leadtime)
-    title_sp1 = paste0("Speed - ", tid, " - 2023:98-128")
+    if (!file.exists(file.path(wd2, speed.title))) {
+      png(filename = speed.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    } else {
+      print(paste0("File '", speed.title, "' already exists. Skipped it.")) # skip if file already exists
+    }
+    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE)) # layout for 3 plots on one page
+    
+    title_sp1 = paste0("Relative Speed - ", tid, " - ", date)
     ylab_sp1 = "mean error"
-    stat.plot(x, colmeans_speed, colmeans_speed_lin, ylab_sp1, title_sp1)
+    stat.plot(x, colmeans_speed, colmeans_speed_lin, ylab_sp1, title_sp1, "topright")
     # leadtime 1
-    title_sp2 = paste0("Speed - ", tid," - 2023:98-128; Leadtime 1")
-    stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], ylab_sp1, title_sp2)
+    title_sp2 = paste0("Relative Speed - ", tid," - ", date, "; Leadtime 0-1")
+    stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], ylab_sp1, title_sp2, "topright")
     # leadtime 2:10
-    title_sp3 = paste0("Speed - ", tid, " - 2023:98-128; Leadtime 2-10")
-    stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], ylab_sp1, title_sp3)
-
+    title_sp3 = paste0("Relative Speed - ", tid, " - ", date, "; Leadtime 1-10")
+    stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], ylab_sp1, title_sp3, "topleft")
+    dev.off()
+    
     # angle (entire leadtime)
-    title_an1 = paste0("Relative Angle - ", tid, " - 2023:98-128")
+    if (!file.exists(file.path(wd2, angle.title))) {
+      png(filename = angle.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    } else {
+      print(paste0("File '", angle.title, "' already exists. Skipped it.")) # skip if file already exists
+    }
+    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))# layout for 3 plots on one page
+    
+    title_an1 = paste0("Relative Angle - ", tid, " - ", date)
     ylab_an1 = "mean error / degree left"
-    stat.plot(x, colmeans_angle, colmeans_angle_lin, ylab_an1, title_an1)
+    stat.plot(x, colmeans_angle, colmeans_angle_lin, ylab_an1, title_an1, "topright")
     # leadtime 1
-    title_an2 = paste0("Relative Angle - ", tid, " - 2023:98-128; Leadtime 1")
-    stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], ylab_an1, title_an2)
+    title_an2 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 0-1")
+    stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], ylab_an1, title_an2, "topright")
     # leadtime 2:10
-    title_an3 = paste0("Relative Angle - ", tid, " - 2023:98-128; Leadtime 2-10")
-    stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3)
+    title_an3 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 1-10")
+    stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3, "topleft")
+    dev.off()
     
-    # plots for daily steps 
-    # herefore I recommend changing "type" in stat.plot to "p", and "lines" to "points"
-    stat.plot(1:10, dis_1d_mean, dis_lin_1d_mean, ylab_gc1, title_gc1)
-    stat.plot(1:10, speed_1d_mean, speed_lin_1d_mean, ylab_sp1, title_sp1)
-    stat.plot(1:10, angle_1d_mean, angle_lin_1d_mean, ylab_an1, title_an1)
+    # plots for daily steps (same as above, only with type points instead of lines)
+    stat.points = function(x, high.res, lin, ylab, title, pos.lg) {
+      ylim1 = range(range_calc(high.res), range_calc(lin))
+      plot(x = x, y = high.res, xlab="days lead time", ylab = ylab,
+           main = title, ylim = ylim1, col = "black", type = "p")
+      abline(h = 0,v = c(1:10),col = "grey",lty = 3)
+      points(x = x, y=lin, col="blue")
+      legend(pos.lg, c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
+    }
     
+    if (!file.exists(file.path(wd2, daily.title))) {
+      png(filename = daily.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    } else {
+      print(paste0("File '", daily.title, "' already exists. Skipped it.")) # skip if file already exists
+    }
+    par(mfrow=c(3,1))
+    stat.points(1:10, dis_1d_mean, dis_lin_1d_mean, ylab_gc1, title_gc1, "topleft")
+    stat.points(1:10, speed_1d_mean, speed_lin_1d_mean, ylab_sp1, title_sp1, "topleft")
+    stat.points(1:10, angle_1d_mean, angle_lin_1d_mean, ylab_an1, title_an1, "topright")
+    dev.off()
+    
+    setwd(wd)
+    print((paste0("Directory has been changed back to ", wd)))
   } # end if-clause for statistics
+  
+  if(matrixs == TRUE && statistics == TRUE && boxplots == TRUE) {
+    
+    myDir = unlist(strsplit(getwd(), '/'))
+    stat.Dir = paste0(myDir[-length(myDir)], collapse = '/') # directory for statistical plots
+    wd3 = setwd(stat.Dir) # change directory
+    wd3 = setwd(stat.Dir) # change directory
+    print(paste0("Directory has been changed to ", wd3))
+    save_dir2 = date
+    if (!file.exists(save_dir2)) { # new folder is only being created if doesn't exist already
+      dir.create(save_dir2)
+      print(paste0("new directory created:", wd3, "/", save_dir2))
+    }
+    wd4 = setwd(paste0(wd3, "/", save_dir2 )) # set new wd 
+    wd4 = setwd(paste0(wd3, "/", save_dir2 )) # set new wd
+    print(paste0("Directory has been changed to ", wd4))
+    
+    # getting daily data sets for each parameter
+    dis_perDay = split.daily(matr_dis[time.sel,])
+    dis_lin_perDay = split.daily(matr_dis_lin[time.sel,])
+    speed_perDay = split.daily(matr_speed[time.sel,])
+    speed_lin_perDay = split.daily(matr_speed_lin[time.sel,])
+    angle_perDay = split.daily(matr_angle[time.sel,])
+    angle_lin_perDay = split.daily(matr_angle_lin[time.sel,])
+    
+    # some boxplotting
+    for(i.bplot in 1:length(dis_perDay)) {
+      bxp.dis = paste0("bxp_", tid, "_", date, "_ld:", i.bplot-1, "-", i.bplot, "_gc.dist.png") # titles for saving plots
+      bxp.speed = paste0("bxp_", tid, "_", date, "_ld:", i.bplot-1, "-", i.bplot, "_speed.png")
+      bxp.angle = paste0("bxp_", tid, "_", date, "_ld:", i.bplot-1, "-", i.bplot, "_angle.png")
+        
+      # gc-dist boxplot
+      if (!file.exists(file.path(wd4, bxp.dis))) {
+        png(filename = bxp.dis, height = 29.7, width = 21, units = "cm", res = 300) # save in DinA4 format (open png)
+        par(mfrow = c(2,1))
+        boxplot(dis_perDay[[i.bplot]], 
+              main = paste0("Great-circle distance - ", tid, " - ", date),
+              xlab="days lead time", 
+              ylab = "great-circle distance / m"
+              )
+        grid(lty = "dotted")
+        boxplot(dis_lin_perDay[[i.bplot]], 
+                main = paste0("Great-circle distance (linear) - ", tid, " - ", date),
+                xlab="days lead time", 
+                ylab = "great-circle distance / m"
+        )
+        grid(lty = "dotted")
+        dev.off()
+      } else {
+        print(paste0("File '", bxp.dis, "' already exists. Skipped it.")) # skip if file already exists
+      }
+      
+      # speed boxplot
+      if (!file.exists(file.path(wd4, bxp.speed))) {
+        png(filename = bxp.speed, height = 29.7, width = 21, units = "cm", res = 300) # save in DinA4 format (open png)
+        par(mfrow = c(2,1))
+        boxplot(speed_perDay[[i.bplot]], 
+                main = paste0("Relative Speed - ", tid, " - ", date),
+                xlab="days lead time",
+                ylab = "relative speed"
+        )
+        grid(lty = "dotted")
+        boxplot(speed_lin_perDay[[i.bplot]], 
+                main = paste0("Relative Speed (linear) - ", tid, " - ", date),
+                xlab="days lead time",
+                ylab = "relative speed"
+        )
+        grid(lty = "dotted")
+        dev.off()
+      } else {
+        print(paste0("File '", bxp.speed, "' already exists. Skipped it.")) # skip if file already exists
+      }
+      
+      # angle boxplot
+      if (!file.exists(file.path(wd4, bxp.angle))) {
+        png(filename = bxp.angle, height = 29.7, width = 21, units = "cm", res = 300) # save in DinA4 format (open png)
+        par(mfrow = c(2,1))
+      boxplot(angle_perDay[[i.bplot]], 
+              main = paste0("Relative Angle - ", tid, " - ", date),
+              xlab="days lead time", 
+              ylab = "relative angle / degree left"
+      )
+      grid(lty = "dotted")
+      boxplot(angle_lin_perDay[[i.bplot]], 
+              main = paste0("Relative Angle (linear) - ", tid, " - ", date),
+              xlab="days lead time", 
+              ylab = "relative angle / degree left"
+      )
+      grid(lty = "dotted")
+      dev.off()
+      } else {
+        print(paste0("File '", bxp.angle, "' already exists. Skipped it.")) # skip if file already exists
+      }
+      
+    } # end plotting loop
+    
+    setwd(wd)
+    print((paste0("Directory has been changed back to ", wd)))
+  } # end if-clause for boxplots
 
 } # end for-loop TargetID
-

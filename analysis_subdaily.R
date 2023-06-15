@@ -16,6 +16,7 @@ source("/home/anjost001/Documents/BA_scripts/split.daily.R")
 # load packages (if not already loaded)
 require(spheRlab)
 require(SIDFEx)
+require(matrixStats)
 
 # setting wd
 if(Sys.info() ["user"] == "anjost001") {
@@ -31,25 +32,25 @@ if(Sys.info() ["user"] == "anjost001") {
 }
 
 # input
-tids = c("900126", "900128", "300534063807110")
+tids = c("900128")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
-iy = "2022"
-idoy = "222" 
+iy = "2023"
+idoy = "80" 
 
 update = FALSE # if updated fcst and obs are wanted
 plot = FALSE # if plots are wanted (might take quite long)
 matrixs = TRUE # if matrices with errors are wanted
 # statistics & boxplots can only be TRUE if matrixs is TRUE
 statistics = TRUE # if statistics are wanted
-boxplots = TRUE # if boxplots are wanted
+boxplots = FALSE # if boxplots are wanted
 # specify time period for statistic & boxplot analysis (not more than 3 months recommended)
 # VERY IMPORTANT: Please make sure, that a forecast exists for those two dates! 
 #                 If you don't know that, don't worry, the possible error will be caught anyway.
 #                 Also, please make sure to enter some dates here anyway, even if you don't want statistics. 
-time.start = "135_2023"
-time.end = "152_2023"
+time.start = "80_2023"
+time.end = "112_2023"
 
 # update fcst and obs data (set TRUE if desired)
 if (update == TRUE) {
@@ -174,14 +175,6 @@ for (i.tid in 1:length(tids)) {
         
         par(mfrow=c(2,2))
         
-        # # calculating ylim for plots
-        # range_calc = function(eval_value) {
-        #   ylim = c()
-        #   is_naN_inf = is.na(eval_value) | is.nan(eval_value) | is.infinite(eval_value)
-        #   ylim = range(eval_value[!is_naN_inf])
-        #   return(ylim)
-        # }
-        
         ylim.lin.speed = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.relspeed)
         ylim.lin.angle = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.angle)
         ylim.lin.gc = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist)
@@ -249,40 +242,67 @@ for (i.tid in 1:length(tids)) {
         # matrices for great-circle distance
         matr_dis = matrix_calc(matr_dis, fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist) # half-hourly
         matr_dis_lin = matrix_calc(matr_dis_lin, fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist) # linear
+        # removing outliners
+        if(tid == "900128" && time.start == "80_2023" && time.end =="112_2023") {
+          matr_dis[205,] = NA # remove day 2023-107
+          matr_dis[206,] = NA # remove day 2023-108
+        }
+        if(tid == "900126" && time.start == "80_2023" && time.end =="112_2023") {
+          matr_dis[201,] = NA # remove day 2023-110
+        }
+        
         # matrices for relative speed
         matr_speed = matrix_calc(matr_speed, fcst.adj.eval$res.list[[1]]$ens.mean.relspeed) # half-hourly
         matr_speed_lin = matrix_calc(matr_speed_lin, fcst.lin.eval$res.list[[1]]$ens.mean.relspeed) # linear
+        # removing outliners
+        if(tid == "900128" && time.start == "80_2023" && time.end =="112_2023") {
+          matr_speed[205,] = NA # remove day 2023-107
+          matr_speed[206,] = NA # remove day 2023-108
+        }
+        if(tid == "900126" && time.start == "80_2023" && time.end =="112_2023") {
+          matr_speed[201,] = NA # remove day 2023-110
+        }
+        
         # matrices for angle
         matr_angle = matrix_calc(matr_angle, fcst.adj.eval$res.list[[1]]$ens.mean.angle) # half-hourly
         matr_angle_lin = matrix_calc(matr_angle_lin, fcst.lin.eval$res.list[[1]]$ens.mean.angle) # linear
-        
+        # removing outliners
+        if(tid == "900128" && time.start == "80_2023" && time.end =="112_2023") {
+          matr_angle[205,] = NA # remove day 2023-107
+          matr_angle[206,] = NA # remove day 2023-108
+        }
+        if(tid == "900126" && time.start == "80_2023" && time.end =="112_2023") {
+          matr_angle[201,] = NA # remove day 2023-110
+        }
       } # end if matrix calc
       
     } # end for-loop sub dataset
     
   } # end for-loop days in res.list    
   
-  # create reference frame to know at which index position which date is located in matrices
-  reference.frame = data.frame(index = 1:length(fcst$res.list), y_doy = NA)
-  for(i.doy in 1:length(fcst$res.list)){
-    reference.frame$y_doy[i.doy] = paste0(fcst$res.list[[i.doy]]$InitDayOfYear, "_", fcst$res.list[[i.doy]]$InitYear)
-  }
-  ref.date.start = which(reference.frame$y_doy == time.start)
-  if(identical(ref.date.start, integer(0))) {
-    stop("No forecast exists for that starting date. Please check '~/SIDFEx/data/fcst/eccc001' for 
-         'ls eccc001_giops_tid_20xx*' (add your tid & year instead of xx) to see if a forecast exists.")
-    print(tid)
-  }
-  ref.date.end = which(reference.frame$y_doy == time.end)
-  if(identical(ref.date.end, integer(0))) {
-    stop("No forecast exists for that ending date. Please check '~/SIDFEx/data/fcst/eccc001' for 
-         'ls eccc001_giops_tid_20xx*' (add your tid & year instead of xx) to see if a forecast exists.")
-    print(tid)
-  } 
-  time.sel = c(ref.date.start:ref.date.end) 
+
     
   # some statistics
   if(matrixs == TRUE && statistics == TRUE){
+    
+    # create reference frame to know at which index position which date is located in matrices
+    reference.frame = data.frame(index = 1:length(fcst$res.list), y_doy = NA)
+    for(i.doy in 1:length(fcst$res.list)){
+      reference.frame$y_doy[i.doy] = paste0(fcst$res.list[[i.doy]]$InitDayOfYear, "_", fcst$res.list[[i.doy]]$InitYear)
+    }
+    ref.date.start = which(reference.frame$y_doy == time.start)
+    if(identical(ref.date.start, integer(0))) {
+      stop("No forecast exists for that starting date. Please check '~/SIDFEx/data/fcst/eccc001' for 
+         'ls eccc001_giops_tid_20xx*' (add your tid & year instead of xx) to see if a forecast exists.")
+      print(tid)
+    }
+    ref.date.end = which(reference.frame$y_doy == time.end)
+    if(identical(ref.date.end, integer(0))) {
+      stop("No forecast exists for that ending date. Please check '~/SIDFEx/data/fcst/eccc001' for 
+         'ls eccc001_giops_tid_20xx*' (add your tid & year instead of xx) to see if a forecast exists.")
+      print(tid)
+    } 
+    time.sel = c(ref.date.start:ref.date.end) 
     
     # mean value for every step of the highly resolved leadtime
     colmeans_dis = colMeans(matr_dis[time.sel,], na.rm = T)
@@ -300,16 +320,43 @@ for (i.tid in 1:length(tids)) {
     speed_lin_1d_mean = calc.mean(colmeans_speed_lin)
     angle_1d_mean = calc.mean(colmeans_angle)
     angle_lin_1d_mean = calc.mean(colmeans_angle_lin)
+    
+    # standard deviation
+    sd_dis = colSds(matr_dis[time.sel,], na.rm = T)
+    sd_disP = colmeans_dis + sd_dis
+    sd_disM = colmeans_dis - sd_dis
+    sd_dis_lin = colSds(matr_dis_lin[time.sel,], na.rm = T)
+    sd_disP_lin = colmeans_dis_lin + sd_dis_lin
+    sd_disM_lin = colmeans_dis_lin - sd_dis_lin
+    
+    sd_speed = colSds(matr_speed[time.sel,], na.rm = T)
+    sd_speedP = colmeans_speed + sd_speed
+    sd_speedM = colmeans_speed - sd_speed
+    sd_speed_lin = colSds(matr_speed_lin[time.sel,], na.rm = T)
+    sd_speedP_lin = colmeans_speed_lin + sd_speed_lin
+    sd_speedM_lin = colmeans_speed_lin - sd_speed_lin
+    
+    sd_angle = colSds(matr_angle[time.sel,], na.rm = T)
+    sd_angleP = colmeans_angle + sd_angle
+    sd_angleM = colmeans_angle - sd_angle
+    sd_angle_lin = colSds(matr_angle_lin[time.sel,], na.rm = T)
+    sd_angleP_lin = colmeans_angle_lin + sd_angle_lin
+    sd_angleM_lin = colmeans_angle_lin - sd_angle_lin
 
     # some statistical plotting
     # function for plotting
-    stat.plot = function(x, high.res, lin, ylab, title, pos.lg) {
-      ylim1 = range(range_calc(high.res), range_calc(lin))
-      plot(x = x, y = high.res, xlab="days lead time", ylab = ylab,
-          main = title, ylim = ylim1, col = "black", type = "l")
+    stat.plot = function(x, high.res, lin, sdP, sdM, sdP_lin, sdM_lin, ylab, title, pos.lg) {
+      ylim1 = range(range_calc(high.res), range_calc(lin), range_calc(sdP), range_calc(sdM))
+      plot(x = x, y = sdM, xlab="days lead time", ylab = ylab,
+          main = title, ylim = ylim1, col = "lightgrey", type = "l", lty = "dashed")
+      lines(x = x, y = sdP, col = "lightgrey", lty = "dashed")
+      lines(x = x, y = sdP_lin, col = "lightblue", lty = "dashed")
+      lines(x = x, y = sdM_lin, col = "lightblue", lty = "dashed")
+      # polygon(c(x, rev(x)), c(sdP, rev(sdM)), col = "lightyellow", border = NA)
       abline(h = 0,v = c(1:10),col = "grey",lty = 3)
-      lines(x = x, y=lin, col="blue")
-      legend(pos.lg, c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
+      lines(x = x, y = high.res, col = "black")
+      lines(x = x, y = lin, col = "blue")
+      legend(pos.lg, c("High, subdaily resolution", "Daily resolution", "Standard Deviation (High res)"), col = c("black", "blue", "grey"), lty = c(1,1,1), bty = "n", cex = 0.7)
     }
     
     # plots for half-hourly steps
@@ -342,7 +389,7 @@ for (i.tid in 1:length(tids)) {
     }
     title_gc1 = paste0("Great circle distance - ", tid, " - ", date)
     ylab_gc1 = "mean error / m"
-    stat.plot(x, colmeans_dis, colmeans_dis_lin, ylab_gc1, title_gc1, "topleft")
+    stat.plot(x, colmeans_dis, colmeans_dis_lin, sd_disP, sd_disM, sd_disP_lin, sd_disM_lin, ylab_gc1, title_gc1, "topleft")
     dev.off()
     
     # speed (entire leadtime)
@@ -355,13 +402,13 @@ for (i.tid in 1:length(tids)) {
     
     title_sp1 = paste0("Relative Speed - ", tid, " - ", date)
     ylab_sp1 = "mean error"
-    stat.plot(x, colmeans_speed, colmeans_speed_lin, ylab_sp1, title_sp1, "topright")
+    stat.plot(x, colmeans_speed, colmeans_speed_lin, sd_speedP, sd_speedM, sd_speedP_lin, sd_speedM_lin, ylab_sp1, title_sp1, "topright")
     # leadtime 1
     title_sp2 = paste0("Relative Speed - ", tid," - ", date, "; Leadtime 0-1")
-    stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], ylab_sp1, title_sp2, "topright")
+    stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], sd_speedP[1:49], sd_speedM[1:49], sd_speedP_lin[1:49], sd_speedM_lin[1:49], ylab_sp1, title_sp2, "topright")
     # leadtime 2:10
     title_sp3 = paste0("Relative Speed - ", tid, " - ", date, "; Leadtime 1-10")
-    stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], ylab_sp1, title_sp3, "topleft")
+    stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], sd_speedP[49:(length(colmeans_speed_lin))], sd_speedM[49:(length(colmeans_speed_lin))], sd_speedP_lin[49:(length(colmeans_speed))], sd_speedM_lin[49:(length(colmeans_speed))], ylab_sp1, title_sp3, "topleft")
     dev.off()
     
     # angle (entire leadtime)
@@ -374,13 +421,13 @@ for (i.tid in 1:length(tids)) {
     
     title_an1 = paste0("Relative Angle - ", tid, " - ", date)
     ylab_an1 = "mean error / degree left"
-    stat.plot(x, colmeans_angle, colmeans_angle_lin, ylab_an1, title_an1, "topright")
+    stat.plot(x, colmeans_angle, colmeans_angle_lin, sd_angleP, sd_angleM, sd_angleP_lin, sd_angleM_lin, ylab_an1, title_an1, "topright")
     # leadtime 1
     title_an2 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 0-1")
-    stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], ylab_an1, title_an2, "topright")
+    stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], sd_angleP[1:49], sd_angleM[1:49], sd_angleP_lin[1:49], sd_angleM_lin[1:49], ylab_an1, title_an2, "topright")
     # leadtime 2:10
     title_an3 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 1-10")
-    stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3, "topleft")
+    stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], sd_angleP[49:(length(colmeans_angle_lin))], sd_angleM[49:(length(colmeans_angle_lin))], sd_angleP_lin[49:(length(colmeans_angle_lin))], sd_angleM_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3, "topleft")
     dev.off()
     
     # plots for daily steps (same as above, only with type points instead of lines)

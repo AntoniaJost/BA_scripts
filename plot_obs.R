@@ -6,16 +6,16 @@ require(RColorBrewer)
 
 # for whatever reason 300234065498190 cannot be plotted for 2023-80-86 or 80-112
 
-tid = c("300234065498190")
+tid = c("900126")
 # change tid to tids to use for loop
 # for(i.single in 1:length(tids)){ # quick & dirty way to not enter every tid by hand
 #   tid = tids[i.single]
 #   print(tid)
 
 # set your time preferences
-d.start = 192
-y.start = 2019
-d.end = 163
+d.start = 80
+y.start = 2023
+d.end = 112
 y.end = 2023
 # I recommend using "arctic" for plotting several buoys and "buoy" for single buoys
 zoom = "buoy" # "buoy"
@@ -73,7 +73,7 @@ if(length(tid) == 1) {
   file.name = paste0("obs_", y.start, ":", d.start, "-", d.end, ".png")
 }
 title = paste0("\n", file.name)
-plot.dir = "/home/anjost001/Documents/AWI/Bachelorarbeit/data_analysis/obs"
+plot.dir = "/home/anjost001/Downloads"#"/home/anjost001/Documents/AWI/Bachelorarbeit/data_analysis/obs"
 
 if (file.exists(file.path(plot.dir, file.name))) {
   stop(paste0("File '", file.name, "' already exists. Stopped.")) # skip if file already exists

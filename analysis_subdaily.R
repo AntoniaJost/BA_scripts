@@ -37,20 +37,20 @@ gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
 iy = "2023"
-idoy = "80" 
+idoy = "107" 
 
 update = FALSE # if updated fcst and obs are wanted
-plot = FALSE # if plots are wanted (might take quite long)
-matrixs = TRUE # if matrices with errors are wanted
+plot = TRUE # if plots are wanted (might take quite long)
+matrixs = FALSE # if matrices with errors are wanted
 # statistics & boxplots can only be TRUE if matrixs is TRUE
-statistics = TRUE # if statistics are wanted
+statistics = FALSE # if statistics are wanted
 boxplots = FALSE # if boxplots are wanted
 # specify time period for statistic & boxplot analysis (not more than 3 months recommended)
 # VERY IMPORTANT: Please make sure, that a forecast exists for those two dates! 
 #                 If you don't know that, don't worry, the possible error will be caught anyway.
 #                 Also, please make sure to enter some dates here anyway, even if you don't want statistics. 
-time.start = "80_2023"
-time.end = "112_2023"
+time.start = "135_2023"
+time.end = "165_2023"
 
 # update fcst and obs data (set TRUE if desired)
 if (update == TRUE) {
@@ -65,7 +65,7 @@ indx = sidfex.load.index()
 for (i.tid in 1:length(tids)) {
   tid = tids[i.tid]
   
-  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid)#, iy = iy, idoy = idoy) # delete iy and idoy if wanted
+  subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid, iy = iy, idoy = idoy) # delete iy and idoy if wanted
   fcst = sidfex.read.fcst(subind.fcst)
   obs = sidfex.remaptime.obs2fcst(fcst = fcst)
 
@@ -192,7 +192,7 @@ for (i.tid in 1:length(tids)) {
         obs.adj.xyz = sl.lonlat2xyz(lon=obs.adj$res.list[[1]]$data$Lon, lat=obs.adj$res.list[[1]]$data$Lat)
         xyz.1d = sl.lonlat2xyz(lon=obs.rot.1d$Lon, lat=obs.rot.1d$Lat)  # position after 1 day, so that the plot can be scaled reasonably
         dist.1d = sqrt(xyz.1d$x^2 + xyz.1d$y^2)
-        
+
         plot(NA,xlim=c(-0.3,1)*dist.1d*1.1, ylim=c(-1,1)*dist.1d*1.1,xlab="x / Earth radius",ylab="y / Earth radius")
         #abline(h=0,v=0,col="grey",lty=3)
         points(x=obs.adj.xyz$x, y=obs.adj.xyz$y, col="black",cex=0.3)

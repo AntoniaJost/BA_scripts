@@ -6,16 +6,16 @@ require(RColorBrewer)
 
 # for whatever reason 300234065498190 cannot be plotted for 2023-80-86 or 80-112
 
-tid = c( "300234067527540", "300534063809090", "300534063807110", "300234061162580")
+tid = c("300234065498190")
 # change tid to tids to use for loop
 # for(i.single in 1:length(tids)){ # quick & dirty way to not enter every tid by hand
 #   tid = tids[i.single]
 #   print(tid)
 
 # set your time preferences
-d.start = 80
-y.start = 2023
-d.end = 86
+d.start = 192
+y.start = 2019
+d.end = 163
 y.end = 2023
 # I recommend using "arctic" for plotting several buoys and "buoy" for single buoys
 zoom = "buoy" # "buoy"
@@ -68,9 +68,9 @@ if(zoom == "buoy") {
 
 # creating structure of map
 if(length(tid) == 1) {
-  file.name = paste0(tid, "_", y.start, ":", d.start, "-", d.end, "_obs")
+  file.name = paste0(tid, "_", y.start, ":", d.start, "-", d.end, "_obs.png")
 } else {
-  file.name = paste0("obs_", y.start, ":", d.start, "-", d.end)
+  file.name = paste0("obs_", y.start, ":", d.start, "-", d.end, ".png")
 }
 title = paste0("\n", file.name)
 plot.dir = "/home/anjost001/Documents/AWI/Bachelorarbeit/data_analysis/obs"

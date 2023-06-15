@@ -356,7 +356,7 @@ for (i.tid in 1:length(tids)) {
       abline(h = 0,v = c(1:10),col = "grey",lty = 3)
       lines(x = x, y = high.res, col = "black")
       lines(x = x, y = lin, col = "blue")
-      legend(pos.lg, c("High, subdaily resolution", "Daily resolution", "Standard Deviation (High res)"), col = c("black", "blue", "grey"), lty = c(1,1,1), bty = "n", cex = 0.7)
+      legend(pos.lg, c("High, subdaily resolution", "Daily resolution", "Standard Deviation (High res)", "Standard Deviation (Daily res)"), col = c("black", "blue", "grey", "lightblue"), lty = c(1,1,2,2), bty = "n", cex = 0.7)
     }
     
     # plots for half-hourly steps

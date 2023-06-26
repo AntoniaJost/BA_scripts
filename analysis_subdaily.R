@@ -16,6 +16,7 @@ source("/home/anjost001/Documents/BA_scripts/split.daily.R")
 # load packages (if not already loaded)
 require(spheRlab)
 require(SIDFEx)
+require(viridis)
 require(matrixStats)
 
 # setting wd
@@ -32,12 +33,12 @@ if(Sys.info() ["user"] == "anjost001") {
 }
 
 # input
-tids = c("900128")
+tids = c("300234065498190")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
 iy = "2023"
-idoy = "107" 
+idoy = c(as.character(46:74))
 
 update = FALSE # if updated fcst and obs are wanted
 plot = TRUE # if plots are wanted (might take quite long)
@@ -49,8 +50,8 @@ boxplots = FALSE # if boxplots are wanted
 # VERY IMPORTANT: Please make sure, that a forecast exists for those two dates! 
 #                 If you don't know that, don't worry, the possible error will be caught anyway.
 #                 Also, please make sure to enter some dates here anyway, even if you don't want statistics. 
-time.start = "135_2023"
-time.end = "165_2023"
+time.start = "46_2023"
+time.end = "74_2023"
 
 # update fcst and obs data (set TRUE if desired)
 if (update == TRUE) {
@@ -77,6 +78,8 @@ for (i.tid in 1:length(tids)) {
   ncol = (10*48)+1 # only valuable for giops (10 days a 48 fcst + last day (10.000))
   nrow = length(fcst$res.list) # number of fcst available in total 
   matrix = matrix(nrow = nrow, ncol = ncol) # create empty generic matrix
+  
+  col = viridis(length(fcst$res.list)) # color scheme for separate gc plot
   
   ### Loop over every day in res.list
   for (i in 1:length(fcst$res.list)) {
@@ -223,9 +226,19 @@ for (i.tid in 1:length(tids)) {
         
         # add title
         par(oma = c(0, 0, 3, 0))
-        title(main=paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", fcst$res.list[[1]]$InitDayOfYear), outer = T)
+        title(main=paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", fcst$res.list[[i]]$InitDayOfYear), outer = T) 
         
         dev.off()
+        
+        # control plots for gc dist. all errors over entire time for single lead time days (i.sub needs to be set to 1:1){# instead of 1:length... for every day separately) 
+        # if(i == 1 && i.sub >= 1 && i.sub <= 10) {
+        #   plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col=col[i], xlab="days lead time", ylab = "great-circle distance / m",
+        #        xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]+8000), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
+        #   abline(h=0,v=i.sub,col="grey",lty=3)
+        #   legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = "black", bty = "n", cex = 0.7)
+        # } else {
+        #   lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col=col[i])
+        # }
       } # end if-clause for plotting
       
       # some matrices - calc 6 matrices (3 for gc_dist, speed & angle; twice for linear & normal (half-hourly))
@@ -387,7 +400,7 @@ for (i.tid in 1:length(tids)) {
     } else {
       print(paste0("File '", dist.title, "' already exists. Skipped it.")) # skip if file already exists
     }
-    title_gc1 = paste0("Great circle distance - ", tid, " - ", date)
+    title_gc1 = paste0("Great-circle distance - ", tid, " - ", date)
     ylab_gc1 = "mean error / m"
     stat.plot(x, colmeans_dis, colmeans_dis_lin, sd_disP, sd_disM, sd_disP_lin, sd_disM_lin, ylab_gc1, title_gc1, "topleft")
     dev.off()

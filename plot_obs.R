@@ -6,19 +6,19 @@ require(RColorBrewer)
 
 # for whatever reason 300234065498190 cannot be plotted for 2023-80-86 or 80-112
 
-tid = c("300234065498190")#c("900120", "900121", "900126", "900128", "300234065498190", "300234067527540", "300534063809090", "300534063807110")
+tid = c("900120")#c("900120", "900121", "900126", "900128", "300234065498190", "300234067527540", "300534063809090", "300534063807110")
 # change tid to tids to use for loop
 # for(i.single in 1:length(tids)){ # quick & dirty way to not enter every tid by hand
 #   tid = tids[i.single]
 #   print(tid)
 
 # set your time preferences
-d.start = 46
-y.start = 2023
-d.end = 74
-y.end = 2023
+d.start = 233
+y.start = 2022
+d.end = 243
+y.end = 2022
 # I recommend using "arctic" for plotting several buoys and "buoy" for single buoys
-zoom = "arctic" # "buoy" or "arctic"
+zoom = "buoy" # "buoy" or "arctic"
 
 obs = sidfex.read.obs(TargetID = tid)
 

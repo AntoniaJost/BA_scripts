@@ -6,9 +6,9 @@ require(spheRlab)
 plot.dir = "/home/anjost001/Documents/AWI/Bachelorarbeit"
 
 index = sidfex.load.index()
-tid = c("900128")
+tid = c("300234065498190")
 iy = 2023
-idoy = 108
+idoy = 51
 subind.eccc = sidfex.fcst.search.extractFromTable(index = index, tid = tid, gid = "eccc001")
 plot.dir.tid = file.path(plot.dir, tid)
 if (!dir.exists(plot.dir.tid)){ # create directory if it does not exist yet
@@ -49,14 +49,14 @@ for(i.fcst in 1:length(subind.tid3$File)) {
   sl.plot.naturalearth(pir, what = "land", resolution = "coarse", lwd = 0.5, lines.col = "black") # plot coastline
   sl.plot.lonlatgrid(pir,pole.hole = TRUE, labels = TRUE, col = "grey") # plot grid
   # obs
-  sl.plot.lines(pir, lon = obs.remap$res.list[[1]]$data$Lon, lat =  obs.remap$res.list[[1]]$data$Lat, col = "black", lwd=1) # plot observations
-  sl.plot.points(pir, lon = obs.remap.daily$res.list[[1]]$data$Lon, lat =  obs.remap.daily$res.list[[1]]$data$Lat, pch = 16) # circle for every day of obs
+  sl.plot.lines(pir, lon = obs.remap$res.list[[1]]$data$Lon, lat =  obs.remap$res.list[[1]]$data$Lat, col = "red", lwd=1) # plot observations
+  sl.plot.points(pir, lon = obs.remap.daily$res.list[[1]]$data$Lon, lat =  obs.remap.daily$res.list[[1]]$data$Lat, pch = 16, col = "red") # circle for every day of obs
   sl.plot.points(pir, lon = obs.remap$res.list[[1]]$data$Lon[1], lat =  obs.remap$res.list[[1]]$data$Lat[1], col = "black", pch = 4) # cross for first day
   # fcst
-  col.fcst = "red"
+  col.fcst = "blue"
   sl.plot.lines(pir, lon = fcst$res.list[[1]]$data$Lon, lat =  fcst$res.list[[1]]$data$Lat, col = col.fcst, lwd=1) # plot forecast trajectory
   sl.plot.points(pir, lon = fcst.daily$res.list[[1]]$data$Lon[2:(fcst.reltime.max)], lat =  fcst.daily$res.list[[1]]$data$Lat[2:(fcst.reltime.max)], col = col.fcst, pch = 16) # cross at each day of forecast
-  legend("topleft",legend = c("Obs", fcst$res.list[[1]]$MethodID,"New Day","Start"),col = c("black",col.fcst,rep("black",2)), pch = c(NA,NA,16,4),lty = c(rep("solid",2),rep(NA,2))) # legend
+  legend("topleft",legend = c("Obs", fcst$res.list[[1]]$MethodID,"New Day","Start"),col = c("red",col.fcst,rep("black",2)), pch = c(NA,NA,16,4),lty = c(rep("solid",2),rep(NA,2))) # legend
   sl.plot.end(pir) # stop plot
   
 }

@@ -16,6 +16,8 @@ source("/home/anjost001/Documents/BA_scripts/split.daily.R")
 # load packages (if not already loaded)
 require(spheRlab)
 require(SIDFEx)
+require(pracma)
+require(RColorBrewer)
 require(viridis)
 require(matrixStats)
 
@@ -33,12 +35,12 @@ if(Sys.info() ["user"] == "anjost001") {
 }
 
 # input
-tids = c("300234065498190")
+tids = c("900120")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
-iy = "2023"
-idoy = c(as.character(46:74))
+iy = "2022"
+idoy = c(as.character(223:254))
 
 update = FALSE # if updated fcst and obs are wanted
 plot = TRUE # if plots are wanted (might take quite long)
@@ -232,13 +234,27 @@ for (i.tid in 1:length(tids)) {
         
         # control plots for gc dist. all errors over entire time for single lead time days (i.sub needs to be set to 1:1){# instead of 1:length... for every day separately) 
         # if(i == 1 && i.sub >= 1 && i.sub <= 10) {
-        #   plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col=col[i], xlab="days lead time", ylab = "great-circle distance / m",
-        #        xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]+8000), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
+        #   plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = "lightgrey", lty = "dashed", xlab="days lead time", ylab = "great-circle distance / m",
+        #        xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]+3000), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
         #   abline(h=0,v=i.sub,col="grey",lty=3)
-        #   legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = "black", bty = "n", cex = 0.7)
+        #   legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = "lightgrey", bty = "n", cex = 0.7)
         # } else {
-        #   lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col=col[i])
+        #   lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = "lightgrey", lty = "dashed")
         # }
+        # peaks = findpeaks(fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist)
+        # for(i.peak in 1:(length(peaks[,1])-1)) {
+        #   if(i.peak == 1) {
+        #     start = peaks[i.peak,3]
+        #     end = peaks[i.peak,2]
+        #   } else {
+        #     start = peaks[i.peak - 1,2]
+        #     end = peaks[i.peak,2]
+        #   }
+        #   color = brewer.pal(length(peaks[,1]), "Dark2")[i.peak] #rainbow((length(peaks[,1])+1))[i.peak]
+        #   
+        #   segments(fcst.adj$res.list[[1]]$data$DaysLeadTime[start], fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist[start], fcst.adj$res.list[[1]]$data$DaysLeadTime[end], fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist[end], col = color)
+        # }
+        
       } # end if-clause for plotting
       
       # some matrices - calc 6 matrices (3 for gc_dist, speed & angle; twice for linear & normal (half-hourly))

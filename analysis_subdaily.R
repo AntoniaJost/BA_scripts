@@ -53,23 +53,27 @@ boxplots = FALSE # if boxplots are wanted
 #                 If you don't know that, don't worry, the possible error will be caught anyway.
 #                 Also, please make sure to enter some dates here anyway, even if you don't want statistics. 
 time.start = "46_2023"
-time.end = "74_2023"
+time.end = "60_2023"
 
 # update fcst and obs data (set TRUE if desired)
 if (update == TRUE) {
-  res = sidfex.download.fcst()
+  res = sidfex.download.fcst(from.scratch = T)
   res2 = sidfex.download.obs()
 }
 
 # load SIDFEx index and read data
 indx = sidfex.load.index()
-  
+
 # Loop over TargetIDs
 for (i.tid in 1:length(tids)) {
   tid = tids[i.tid]
   
   subind.fcst = sidfex.fcst.search.extractFromTable(index = indx, tid = tid, gid = gid, mid = mid, iy = iy, idoy = idoy) # delete iy and idoy if wanted
   fcst = sidfex.read.fcst(subind.fcst)
+  # fcst$res.list = fcst$res.list[-1] # nur fuer 300234065498190, 2023:223-254 oder 900120, 2022:223-254 (dann 2x)
+  # fcst$res.list = fcst$res.list[-1] # nur fuer 300234065498190, 2023:223-254
+  # fcst$index = fcst$index[-1,] # nur fuer 300234065498190, 2023:223-254
+  # fcst$index = fcst$index[-1,] # nur fuer 300234065498190, 2023:223-254
   obs = sidfex.remaptime.obs2fcst(fcst = fcst)
 
   if (length(fcst$res.list) != length(obs$res.list)) { # quick sanity check
@@ -81,7 +85,7 @@ for (i.tid in 1:length(tids)) {
   nrow = length(fcst$res.list) # number of fcst available in total 
   matrix = matrix(nrow = nrow, ncol = ncol) # create empty generic matrix
   
-  col = viridis(length(fcst$res.list)) # color scheme for separate gc plot
+  col = viridis(length(fcst$res.list)) # color scheme for separate gc plot # brewer.pal(length(fcst$res.list), "Dark2") 
   
   ### Loop over every day in res.list
   for (i in 1:length(fcst$res.list)) {
@@ -94,7 +98,7 @@ for (i.tid in 1:length(tids)) {
     fcst_subdiv = subdiv_dataset(fcst) # subdivided fcst dataset
     
     # loop over every of the sub data sets
-    for (i.sub in 1:length(obs_subdiv)) {
+    for (i.sub in 1:1){#1:length(obs_subdiv)) {
       if (i == 49 && i.sub == 9 || i == 234 && i.sub == 10) {
         i.sub=- i.sub + 1
         next  # skip error plot (too close to north pole, creating NaNs and Infs)
@@ -232,15 +236,18 @@ for (i.tid in 1:length(tids)) {
         
         dev.off()
         
+     ######################   
         # control plots for gc dist. all errors over entire time for single lead time days (i.sub needs to be set to 1:1){# instead of 1:length... for every day separately) 
-        # if(i == 1 && i.sub >= 1 && i.sub <= 10) {
-        #   plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = "lightgrey", lty = "dashed", xlab="days lead time", ylab = "great-circle distance / m",
-        #        xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]+3000), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
-        #   abline(h=0,v=i.sub,col="grey",lty=3)
-        #   legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = "lightgrey", bty = "n", cex = 0.7)
-        # } else {
-        #   lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = "lightgrey", lty = "dashed")
-        # }
+        if(i == 1 && i.sub >= 1 && i.sub <= 10) {
+          plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = col[i], lty = "solid", xlab="days lead time", ylab = "great-circle distance / m",
+               xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
+          abline(h=0,v=i.sub,col="grey",lty=3)
+          legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = col[i], bty = "n", cex = 0.7)
+          legend("bottomright", as.character(fcst.adj$index$InitDayOfYear), lty = 1, col = col, cex = 0.4)
+        } else {
+          lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = col[i], lty = "solid")
+
+          }
         # peaks = findpeaks(fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist)
         # for(i.peak in 1:(length(peaks[,1])-1)) {
         #   if(i.peak == 1) {
@@ -250,11 +257,14 @@ for (i.tid in 1:length(tids)) {
         #     start = peaks[i.peak - 1,2]
         #     end = peaks[i.peak,2]
         #   }
-        #   color = brewer.pal(length(peaks[,1]), "Dark2")[i.peak] #rainbow((length(peaks[,1])+1))[i.peak]
-        #   
+        # 
+        #   for(i.dot in 1:length(peaks[,1])){
+        #     x = which.max(fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist)
+        #     points(fcst.adj$res.list[[1]]$data$DaysLeadTime[x], fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist[x], col = col[i], pch = 16)
+        #   }
         #   segments(fcst.adj$res.list[[1]]$data$DaysLeadTime[start], fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist[start], fcst.adj$res.list[[1]]$data$DaysLeadTime[end], fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist[end], col = color)
         # }
-        
+      #################  
       } # end if-clause for plotting
       
       # some matrices - calc 6 matrices (3 for gc_dist, speed & angle; twice for linear & normal (half-hourly))

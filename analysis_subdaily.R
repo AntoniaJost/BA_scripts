@@ -98,7 +98,7 @@ for (i.tid in 1:length(tids)) {
     fcst_subdiv = subdiv_dataset(fcst) # subdivided fcst dataset
     
     # loop over every of the sub data sets
-    for (i.sub in 1:1){#1:length(obs_subdiv)) {
+    for (i.sub in 1:length(obs_subdiv)) {
       if (i == 49 && i.sub == 9 || i == 234 && i.sub == 10) {
         i.sub=- i.sub + 1
         next  # skip error plot (too close to north pole, creating NaNs and Infs)
@@ -238,16 +238,16 @@ for (i.tid in 1:length(tids)) {
         
      ######################   
         # control plots for gc dist. all errors over entire time for single lead time days (i.sub needs to be set to 1:1){# instead of 1:length... for every day separately) 
-        if(i == 1 && i.sub >= 1 && i.sub <= 10) {
-          plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = col[i], lty = "solid", xlab="days lead time", ylab = "great-circle distance / m",
-               xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
-          abline(h=0,v=i.sub,col="grey",lty=3)
-          legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = col[i], bty = "n", cex = 0.7)
-          legend("bottomright", as.character(fcst.adj$index$InitDayOfYear), lty = 1, col = col, cex = 0.4)
-        } else {
-          lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = col[i], lty = "solid")
-
-          }
+        # if(i == 1 && i.sub >= 1 && i.sub <= 10) {
+        #   plot(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = col[i], lty = "solid", xlab="days lead time", ylab = "great-circle distance / m",
+        #        xlim=c(i.sub-1.05,i.sub+0.05), ylim = c(range_gc[1], range_gc[2]), type = "l", main = paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", idoy[1], ":", idoy[length(idoy)]))
+        #   abline(h=0,v=i.sub,col="grey",lty=3)
+        #   legend("topleft", c( "Error betw. obs & hh fcst"), lty = 1, col = col[i], bty = "n", cex = 0.7)
+        #   legend("bottomright", as.character(fcst.adj$index$InitDayOfYear), lty = 1, col = col, cex = 0.4)
+        # } else {
+        #   lines(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col = col[i], lty = "solid")
+        # 
+        #   }
         # peaks = findpeaks(fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist)
         # for(i.peak in 1:(length(peaks[,1])-1)) {
         #   if(i.peak == 1) {

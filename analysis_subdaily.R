@@ -35,18 +35,18 @@ if(Sys.info() ["user"] == "anjost001") {
 }
 
 # input
-tids = c("900120")
+tids = c("300234065498190")
 gid = "eccc001"
 mid = "giops"
 # if you don't want any date specification, please remove parameters iy and doy completely from subind.fcst (doesn't work with empty string)
-iy = "2022"
-idoy = c(as.character(223:254))
+iy = "2023"
+idoy = c(as.character(46:60))
 
 update = FALSE # if updated fcst and obs are wanted
-plot = TRUE # if plots are wanted (might take quite long)
-matrixs = FALSE # if matrices with errors are wanted
+plot = FALSE # if plots are wanted (might take quite long)
+matrixs = TRUE # if matrices with errors are wanted
 # statistics & boxplots can only be TRUE if matrixs is TRUE
-statistics = FALSE # if statistics are wanted
+statistics = TRUE # if statistics are wanted
 boxplots = FALSE # if boxplots are wanted
 # specify time period for statistic & boxplot analysis (not more than 3 months recommended)
 # VERY IMPORTANT: Please make sure, that a forecast exists for those two dates! 
@@ -174,15 +174,15 @@ for (i.tid in 1:length(tids)) {
       # some plotting
       if (plot == TRUE) {
         
-        plot.title = paste0(fcst$res.list[[i]]$TargetID, "_", fcst$res.list[[i]]$GroupID, "_", fcst$res.list[[i]]$MethodID, "_", fcst$res.list[[i]]$InitYear, "-", fcst$res.list[[i]]$InitDayOfYear, "_ld:", i.sub, ".png")
+        plot.title = paste0(fcst$res.list[[i]]$TargetID, "_", fcst$res.list[[i]]$GroupID, "_", fcst$res.list[[i]]$MethodID, "_", fcst$res.list[[i]]$InitYear, "-", fcst$res.list[[i]]$InitDayOfYear, "_ld:", i.sub, ".pdf")
         if (!file.exists(file.path(wd, plot.title))) {
-          png(filename = plot.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+          pdf(file = plot.title, height = 11, width = 30) #units = "cm", res = 300) # save in DinA4 format (open pdf)
         } else {
           print(paste0("File '", plot.title, "' already exists. Skipped it.")) # skip if file already exists
           next
         }
         
-        par(mfrow=c(2,2))
+        par(mfrow=c(1,2))
         
         ylim.lin.speed = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.relspeed)
         ylim.lin.angle = range_calc(fcst.lin.eval$res.list[[1]]$ens.mean.angle)
@@ -201,39 +201,51 @@ for (i.tid in 1:length(tids)) {
         obs.adj.xyz = sl.lonlat2xyz(lon=obs.adj$res.list[[1]]$data$Lon, lat=obs.adj$res.list[[1]]$data$Lat)
         xyz.1d = sl.lonlat2xyz(lon=obs.rot.1d$Lon, lat=obs.rot.1d$Lat)  # position after 1 day, so that the plot can be scaled reasonably
         dist.1d = sqrt(xyz.1d$x^2 + xyz.1d$y^2)
-
-        plot(NA,xlim=c(-0.3,1)*dist.1d*1.1, ylim=c(-1,1)*dist.1d*1.1,xlab="x / Earth radius",ylab="y / Earth radius")
+        
+        par(mar = c(9,6,7,5))
+        plot(NA,xlim=c(-0.1,1)*dist.1d*1.1, ylim=c(-0.5,0.5)*dist.1d*1.1, xlab="", ylab="", xaxt = "n", yaxt="n")
+        mtext(plot.title, side = 3, line = - 2, outer = TRUE, cex = 3, padj = 0.5)
+        axis(1, cex.axis = 2.6, padj = 0.6)
+        axis(2, cex.axis = 2.6)
+        mtext(side=1, line=2, "x / Earth radius", col="black", font=1, cex=3, padj = 2)
+        mtext(side=2, line=3, "y / Earth radius", col="black", font=1, cex=3, padj = -0.5)
         #abline(h=0,v=0,col="grey",lty=3)
-        points(x=obs.adj.xyz$x, y=obs.adj.xyz$y, col="black",cex=0.3)
-        points(x=fcst.lin.xyz$x, y=fcst.lin.xyz$y, col="grey",cex=0.3)
-        points(x=fcst.adj.xyz$x, y=fcst.adj.xyz$y, col="red",cex=0.3)
+        points(x=obs.adj.xyz$x, y=obs.adj.xyz$y, col="red",cex=0.7)
+        points(x=fcst.lin.xyz$x, y=fcst.lin.xyz$y, col="grey",cex=0.7)
+        points(x=fcst.adj.xyz$x, y=fcst.adj.xyz$y, col="blue",cex=0.7)
         points(x=dist.1d, y=0, pch="+", col="orange",cex=2)
-        legend("topleft", c("obs adjusted", "fcst linear", "fcst adjusted", "1 day"), col = c("black","grey","red","orange"), pch = c(1,1,1,3), bty = "n", cex = 0.7)
+        legend("topleft", c("observations", "daily forecast", "half-hourly forecast", "1 day"), col = c("red","grey","blue","orange"), pch = c(1,1,1,3), bty = "n", cex = 2)
         
         # plot evaluation results
         # great-circle distance
-        plot(x=fcst.lin$res.list[[1]]$data$DaysLeadTime, y=fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist, xlab="days lead time", ylab = "great-circle distance / m",
+        par(mar = c(9,6,7,2))
+        plot(x=fcst.lin$res.list[[1]]$data$DaysLeadTime, y=fcst.lin.eval$res.list[[1]]$ens.mean.gc.dist, xlab="", ylab="", xaxt = "n", yaxt="n",
              xlim=c(i.sub-1.05,i.sub+0.05), ylim = range_gc, col = "grey")
+        #title(xlab="days lead time", ylab = "great-circle distance / m", cex.lab = 2)
+        axis(1, cex.axis = 2.6, padj = 0.6)
+        axis(2, cex.axis = 2.6)
+        mtext(side=1, line=2, "days lead time", col="black", font=1, cex=3, padj = 2)
+        mtext(side=2, line=3, "great-circle distance / m", col="black", font=1, cex=3, padj = -1.5)
         abline(h=0,v=i.sub,col="grey",lty=3)
         points(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.gc.dist, col="red")
-        legend("topleft", c("Error betw. obs & daily fcst", "Error betw. obs & hh fcst"), col = c("grey", "red"), pch = c(1,1), bty = "n", cex = 0.7)
+        legend("topleft", c("Error betw. obs & daily fcst", "Error betw. obs & hh fcst"), col = c("grey", "red"), pch = c(1,1), bty = "n", cex = 2)
         
-        # relative speed
-        plot(x=fcst.lin$res.list[[1]]$data$DaysLeadTime, y=fcst.lin.eval$res.list[[1]]$ens.mean.relspeed, xlab="days lead time", ylab = "relative speed",
-             xlim=c(i.sub-1.05,i.sub+0.05), ylim=range_speed, col="grey")
-        points(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.relspeed, col="red")
-        abline(h=1,v=i.sub,col="grey",lty=3)
-        
-        # relative angle
-        plot(x=fcst.lin$res.list[[1]]$data$DaysLeadTime, y=fcst.lin.eval$res.list[[1]]$ens.mean.angle, xlab="days lead time", ylab = "relative angle / degree left",
-             xlim=c(i.sub-1.05,i.sub+0.05), ylim=range_angle, col="grey")
-        abline(h=0,v=i.sub,col="grey",lty=3)
-        points(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.angle, col="red")
-        
-        # add title
-        par(oma = c(0, 0, 3, 0))
-        title(main=paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", fcst$res.list[[i]]$InitDayOfYear), outer = T) 
-        
+        # # relative speed
+        # plot(x=fcst.lin$res.list[[1]]$data$DaysLeadTime, y=fcst.lin.eval$res.list[[1]]$ens.mean.relspeed, xlab="days lead time", ylab = "relative speed",
+        #      xlim=c(i.sub-1.05,i.sub+0.05), ylim=range_speed, col="grey")
+        # points(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.relspeed, col="red")
+        # abline(h=1,v=i.sub,col="grey",lty=3)
+        # 
+        # # relative angle
+        # plot(x=fcst.lin$res.list[[1]]$data$DaysLeadTime, y=fcst.lin.eval$res.list[[1]]$ens.mean.angle, xlab="days lead time", ylab = "relative angle / degree left",
+        #      xlim=c(i.sub-1.05,i.sub+0.05), ylim=range_angle, col="grey")
+        # abline(h=0,v=i.sub,col="grey",lty=3)
+        # points(x=fcst.adj$res.list[[1]]$data$DaysLeadTime, y=fcst.adj.eval$res.list[[1]]$ens.mean.angle, col="red")
+        # 
+        # # add title
+        # par(oma = c(0, 0, 3, 0))
+        # title(main=paste0("Analysis subdaily resolution \n ", fcst$res.list[[1]]$TargetID, "_", fcst$res.list[[1]]$GroupID, "_", fcst$res.list[[1]]$MethodID, "_", fcst$res.list[[1]]$InitYear, "-", fcst$res.list[[i]]$InitDayOfYear), outer = T) 
+        # 
         dev.off()
         
      ######################   
@@ -395,7 +407,7 @@ for (i.tid in 1:length(tids)) {
       abline(h = 0,v = c(1:10),col = "grey",lty = 3)
       lines(x = x, y = high.res, col = "black")
       lines(x = x, y = lin, col = "blue")
-      legend(pos.lg, c("High, subdaily resolution", "Daily resolution", "Standard Deviation (High res)", "Standard Deviation (Daily res)"), col = c("black", "blue", "grey", "lightblue"), lty = c(1,1,2,2), bty = "n", cex = 0.7)
+      legend(pos.lg, c("High, subdaily resolution", "Daily resolution", "Standard Deviation (High res)", "Standard Deviation (Daily res)"), col = c("black", "blue", "grey", "lightblue"), lty = c(1,1,2,2), bty = "n", cex = 1.2)
     }
     
     # plots for half-hourly steps
@@ -431,65 +443,65 @@ for (i.tid in 1:length(tids)) {
     stat.plot(x, colmeans_dis, colmeans_dis_lin, sd_disP, sd_disM, sd_disP_lin, sd_disM_lin, ylab_gc1, title_gc1, "topleft")
     dev.off()
     
-    # speed (entire leadtime)
-    if (!file.exists(file.path(wd2, speed.title))) {
-      png(filename = speed.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
-    } else {
-      print(paste0("File '", speed.title, "' already exists. Skipped it.")) # skip if file already exists
-    }
-    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE)) # layout for 3 plots on one page
-    
-    title_sp1 = paste0("Relative Speed - ", tid, " - ", date)
-    ylab_sp1 = "mean error"
-    stat.plot(x, colmeans_speed, colmeans_speed_lin, sd_speedP, sd_speedM, sd_speedP_lin, sd_speedM_lin, ylab_sp1, title_sp1, "topright")
-    # leadtime 1
-    title_sp2 = paste0("Relative Speed - ", tid," - ", date, "; Leadtime 0-1")
-    stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], sd_speedP[1:49], sd_speedM[1:49], sd_speedP_lin[1:49], sd_speedM_lin[1:49], ylab_sp1, title_sp2, "topright")
-    # leadtime 2:10
-    title_sp3 = paste0("Relative Speed - ", tid, " - ", date, "; Leadtime 1-10")
-    stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], sd_speedP[49:(length(colmeans_speed_lin))], sd_speedM[49:(length(colmeans_speed_lin))], sd_speedP_lin[49:(length(colmeans_speed))], sd_speedM_lin[49:(length(colmeans_speed))], ylab_sp1, title_sp3, "topleft")
-    dev.off()
-    
-    # angle (entire leadtime)
-    if (!file.exists(file.path(wd2, angle.title))) {
-      png(filename = angle.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
-    } else {
-      print(paste0("File '", angle.title, "' already exists. Skipped it.")) # skip if file already exists
-    }
-    layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))# layout for 3 plots on one page
-    
-    title_an1 = paste0("Relative Angle - ", tid, " - ", date)
-    ylab_an1 = "mean error / degree left"
-    stat.plot(x, colmeans_angle, colmeans_angle_lin, sd_angleP, sd_angleM, sd_angleP_lin, sd_angleM_lin, ylab_an1, title_an1, "topright")
-    # leadtime 1
-    title_an2 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 0-1")
-    stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], sd_angleP[1:49], sd_angleM[1:49], sd_angleP_lin[1:49], sd_angleM_lin[1:49], ylab_an1, title_an2, "topright")
-    # leadtime 2:10
-    title_an3 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 1-10")
-    stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], sd_angleP[49:(length(colmeans_angle_lin))], sd_angleM[49:(length(colmeans_angle_lin))], sd_angleP_lin[49:(length(colmeans_angle_lin))], sd_angleM_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3, "topleft")
-    dev.off()
-    
-    # plots for daily steps (same as above, only with type points instead of lines)
-    stat.points = function(x, high.res, lin, ylab, title, pos.lg) {
-      ylim1 = range(range_calc(high.res), range_calc(lin))
-      plot(x = x, y = high.res, xlab="days lead time", ylab = ylab,
-           main = title, ylim = ylim1, col = "black", type = "p")
-      abline(h = 0,v = c(1:10),col = "grey",lty = 3)
-      points(x = x, y=lin, col="blue")
-      legend(pos.lg, c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
-    }
-    
-    if (!file.exists(file.path(wd2, daily.title))) {
-      png(filename = daily.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
-    } else {
-      print(paste0("File '", daily.title, "' already exists. Skipped it.")) # skip if file already exists
-    }
-    par(mfrow=c(3,1))
-    stat.points(1:10, dis_1d_mean, dis_lin_1d_mean, ylab_gc1, title_gc1, "topleft")
-    stat.points(1:10, speed_1d_mean, speed_lin_1d_mean, ylab_sp1, title_sp1, "topleft")
-    stat.points(1:10, angle_1d_mean, angle_lin_1d_mean, ylab_an1, title_an1, "topright")
-    dev.off()
-    
+    # # speed (entire leadtime)
+    # if (!file.exists(file.path(wd2, speed.title))) {
+    #   png(filename = speed.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    # } else {
+    #   print(paste0("File '", speed.title, "' already exists. Skipped it.")) # skip if file already exists
+    # }
+    # layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE)) # layout for 3 plots on one page
+    # 
+    # title_sp1 = paste0("Relative Speed - ", tid, " - ", date)
+    # ylab_sp1 = "mean error"
+    # stat.plot(x, colmeans_speed, colmeans_speed_lin, sd_speedP, sd_speedM, sd_speedP_lin, sd_speedM_lin, ylab_sp1, title_sp1, "topright")
+    # # leadtime 1
+    # title_sp2 = paste0("Relative Speed - ", tid," - ", date, "; Leadtime 0-1")
+    # stat.plot(x_1d, colmeans_speed[1:49], colmeans_speed_lin[1:49], sd_speedP[1:49], sd_speedM[1:49], sd_speedP_lin[1:49], sd_speedM_lin[1:49], ylab_sp1, title_sp2, "topright")
+    # # leadtime 2:10
+    # title_sp3 = paste0("Relative Speed - ", tid, " - ", date, "; Leadtime 1-10")
+    # stat.plot(x_2to10, colmeans_speed[49:(length(colmeans_speed))], colmeans_speed_lin[49:(length(colmeans_speed_lin))], sd_speedP[49:(length(colmeans_speed_lin))], sd_speedM[49:(length(colmeans_speed_lin))], sd_speedP_lin[49:(length(colmeans_speed))], sd_speedM_lin[49:(length(colmeans_speed))], ylab_sp1, title_sp3, "topleft")
+    # dev.off()
+    # 
+    # # angle (entire leadtime)
+    # if (!file.exists(file.path(wd2, angle.title))) {
+    #   png(filename = angle.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    # } else {
+    #   print(paste0("File '", angle.title, "' already exists. Skipped it.")) # skip if file already exists
+    # }
+    # layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))# layout for 3 plots on one page
+    # 
+    # title_an1 = paste0("Relative Angle - ", tid, " - ", date)
+    # ylab_an1 = "mean error / degree left"
+    # stat.plot(x, colmeans_angle, colmeans_angle_lin, sd_angleP, sd_angleM, sd_angleP_lin, sd_angleM_lin, ylab_an1, title_an1, "topright")
+    # # leadtime 1
+    # title_an2 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 0-1")
+    # stat.plot(x_1d, colmeans_angle[1:49], colmeans_angle_lin[1:49], sd_angleP[1:49], sd_angleM[1:49], sd_angleP_lin[1:49], sd_angleM_lin[1:49], ylab_an1, title_an2, "topright")
+    # # leadtime 2:10
+    # title_an3 = paste0("Relative Angle - ", tid, " - ", date, "; Leadtime 1-10")
+    # stat.plot(x_2to10, colmeans_angle[49:(length(colmeans_angle))], colmeans_angle_lin[49:(length(colmeans_angle_lin))], sd_angleP[49:(length(colmeans_angle_lin))], sd_angleM[49:(length(colmeans_angle_lin))], sd_angleP_lin[49:(length(colmeans_angle_lin))], sd_angleM_lin[49:(length(colmeans_angle_lin))], ylab_an1, title_an3, "topleft")
+    # dev.off()
+    # 
+    # # plots for daily steps (same as above, only with type points instead of lines)
+    # stat.points = function(x, high.res, lin, ylab, title, pos.lg) {
+    #   ylim1 = range(range_calc(high.res), range_calc(lin))
+    #   plot(x = x, y = high.res, xlab="days lead time", ylab = ylab,
+    #        main = title, ylim = ylim1, col = "black", type = "p")
+    #   abline(h = 0,v = c(1:10),col = "grey",lty = 3)
+    #   points(x = x, y=lin, col="blue")
+    #   legend(pos.lg, c("High, subdaily resolution", "Daily resolution"), col = c("black", "blue"), lty = c(1,1), bty = "n", cex = 0.7)
+    # }
+    # 
+    # if (!file.exists(file.path(wd2, daily.title))) {
+    #   png(filename = daily.title, height = 21, width = 29.7, units = "cm", res = 300) # save in DinA4 format (open png)
+    # } else {
+    #   print(paste0("File '", daily.title, "' already exists. Skipped it.")) # skip if file already exists
+    # }
+    # par(mfrow=c(3,1))
+    # stat.points(1:10, dis_1d_mean, dis_lin_1d_mean, ylab_gc1, title_gc1, "topleft")
+    # stat.points(1:10, speed_1d_mean, speed_lin_1d_mean, ylab_sp1, title_sp1, "topleft")
+    # stat.points(1:10, angle_1d_mean, angle_lin_1d_mean, ylab_an1, title_an1, "topright")
+    # dev.off()
+    # 
     setwd(wd)
     print((paste0("Directory has been changed back to ", wd)))
   } # end if-clause for statistics

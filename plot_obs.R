@@ -6,7 +6,7 @@ require(RColorBrewer)
 
 # for whatever reason 300234065498190 cannot be plotted for 2023-80-86 or 80-112
 
-tid = c("300234065498190")#c("900120", "900121", "900126", "900128", "300234065498190", "300234067527540")#, "300534063809090", "300534063807110")
+tid = c("900120")#, "900121", "900126", "900128", "300234065498190", "300234067527540")#, "300534063809090", "300534063807110")
 # change tid to tids to use for loop
 # for(i.single in 1:length(tids)){ # quick & dirty way to not enter every tid by hand
 #   tid = tids[i.single]
@@ -74,25 +74,24 @@ if(zoom == "buoy") {
   lon.center = 0 
   lat.center = 90 
   rot.center = 0 
-  bounding.lat = 65
+  bounding.lat = 73
 }
 
 # creating structure of map
 if(length(tid) == 1) {
-  file.name = paste0(tid, "_", y.start, ":", d.start, "-", d.end, "_obs.png")
+  file.name = paste0(tid, "_", y.start, ":", d.start, "-", d.end, "_obs.pdf")
 } else {
-  file.name = paste0("obs_", y.start, ":", d.start, "-", d.end, ".png")
+  file.name = paste0("obs_", y.start, ":", d.start, "-", d.end, ".pdf")
 }
 title = paste0("\n", file.name)
-plot.dir = "/home/anjost001/Documents/AWI/Bachelorarbeit/data_analysis/obs"
+plot.dir = "/home/anjost001/Documents/AWI/Bachelorarbeit/data_analysis/obs/2023:46-74/"
 
 if (file.exists(file.path(plot.dir, file.name))) {
   stop(paste0("File '", file.name, "' already exists. Stopped.")) # skip if file already exists
 } else {
-  par(oma=c(0,0,2,0))
-  pir = sl.plot.init(projection = "polar", polar.latbound = bounding.lat, polar.lonlatrot = c(lon.center,lat.center,rot.center), do.init = T, file.name = file.path(plot.dir, file.name), main = title, device = "png") # build map
-  sl.plot.naturalearth(pir, what = "land", resolution = "coarse", lwd = 0.5, lines.col = "black") # plot coastlines
-  sl.plot.lonlatgrid(pir, pole.hole = TRUE, labels = TRUE, col = "grey", labels.col = "black") # plot grid lines
+  pir = sl.plot.init(projection = "polar", polar.latbound = bounding.lat, polar.lonlatrot = c(lon.center,lat.center,rot.center), do.init = T, main = title, file.name = file.path(plot.dir, file.name), device = "pdf") # build map
+  sl.plot.naturalearth(pir, what = "land", resolution = "medium", lwd = 2, lines.col = "black") # plot coastlines
+  sl.plot.lonlatgrid(pir, pole.hole = TRUE, labels = TRUE, col = "grey", labels.col = "black", lwd = 3, labels.cex = 2) # plot grid lines
   
   label = c()
   colorLegend = c()
@@ -113,10 +112,15 @@ if (file.exists(file.path(plot.dir, file.name))) {
   
     ### plot trajectories
     color = colorRampPalette(brewer.pal(8, "RdYlBu"))(length(tid)) # colorblind-friendly color scale
-    sl.plot.lines(pir, lon = lon.obs, lat = lat.obs, col = color[i.obs]) # plot trajectory
-    sl.plot.points(pir,lon = lon.obs[1],lat = lat.obs[1], pch = 4) # plot cross at first point of trajectory
+    sl.plot.lines(pir, lon = lon.obs, lat = lat.obs, col = color[i.obs], lwd = 4) # plot trajectory
+    if (zoom == "buoy") {
+      cross = 6
+    } else if (zoom == "arctic") {
+      cross = 1
+    }
+    sl.plot.points(pir,lon = lon.obs[1],lat = lat.obs[1], pch = 4, cex = cross) # 6 for buoy # plot cross at first point of trajectory
     if(zoom == "buoy") {
-      sl.plot.points(pir, lon = obs.daily$data$Lon, lat = obs.daily$data$Lat, col = color[i.obs], pch = 16) # point for every new day
+      sl.plot.points(pir, lon = obs.daily$data$Lon, lat = obs.daily$data$Lat, col = color[i.obs], pch = 19, cex = 2) # point for every new day
     }
     labelTid = tid[[i.obs]]         # save TargetID to later display in legend
     label = c(labelTid, label)               # save as array, accessible outside of loop
@@ -127,9 +131,9 @@ if (file.exists(file.path(plot.dir, file.name))) {
   
   sl.plot.end(pir, do.close.device = F) # ending plot before plotting the legend to prevent overlapping
   if(zoom == "arctic") {
-    legend("bottomright", legend = c(label, "start"), col = c(colorLegend, "black"), pch = c(rep(NA, length(tid)), 4), lty = c(rep(1, length(tid)), 0), bg = "white") # legend
+    legend("bottomright", legend = c(label, "start"), col = c(colorLegend, "black"), pch = c(rep(NA, length(tid)), 4), lty = c(rep(1, length(tid)), 0), bg = "white", cex = 1.8) # legend
   } else if(zoom == "buoy") {
-    legend("bottomright", legend = c(label, "new day", "start"), col = c(colorLegend, "red", "black"), pch = c(rep(NA, length(tid)), 16, 4), lty = c(rep(1, length(tid)), 0, 0), bg = "white") # legend
+    legend("bottomright", legend = c(label, "new day", "start"), col = c(colorLegend, "red", "black"), pch = c(rep(NA, length(tid)), 16, 4), lty = c(rep(1, length(tid)), 0, 0), bg = "white", cex = 1.8) # legend
   }
   
   dev.off()
